@@ -1,0 +1,54 @@
+services:
+  postgres-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: qazedcasd132
+    ports:
+      - 5433:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    command: server --console-address ":9001" /data
+    volumes:
+      - minio_data:/data
+    expose:
+      - 9000
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend-define:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3003:3003
+      - 5555:5555
+    restart: always
+    depends_on:
+      - postgres-db
+      - minio
+    environment:
+      DATABASE_URL: 'postgresql://postgres:qazedcasd132@postgres-db:5432/shop'
+      S3_ENDPOINT: 'http://minio:9000'
+      S3_ACCESS_KEY: 'minioadmin'
+      S3_SECRET_KEY: 'minioadmin'
+      S3_REGION: 'EU'
+      S3_BUCKET_NAME: 'shop-define-bucket'
+
+volumes:
+  postgres_data:
+  minio_data:

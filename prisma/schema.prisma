@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -10,10 +11,54 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Модель пользователя
 model User {
-  id           String        @id @default(cuid())
-  email        String?       @unique
-  name         String
-  favorites    String[]
+  id             String         @id @default(cuid())
+  user_type_id   Int            @default(0)
+  email          String?        @unique
+  password       String
+  name           String
+  favorites      Favorite[]
+  refreshTokens  RefreshToken[]
+  comments       Comment[]      // Комментарии пользователя
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
+model Comment {
+  id        String   @id @default(cuid())         
+  text      String                                
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String                                
+  movieId   Int                                
+  createdAt DateTime @default(now())              
+
+  parent    Comment?  @relation("CommentToComment", fields: [parentId], references: [id])
+  parentId  String?
+  replies   Comment[] @relation("CommentToComment")
+}
+
+// Модель избранного фильма пользователя
+model Favorite {
+  id        String   @id @default(cuid())              // Уникальный идентификатор записи
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String                                   // Внешний ключ на пользователя
+  movieId   Int                                       // id фильма
+  createdAt DateTime @default(now())                  // Дата добавления в избранное
+
+  @@unique([userId, movieId])                         // Один фильм может быть в избранном только один раз у пользователя
+}
+
+// Модель refresh-токена
+model RefreshToken {
+  id          String   @id @default(uuid())             // Уникальный идентификатор токена
+  hashedToken String   @unique                         // Хэш токена
+  userId      String                                   // Внешний ключ на пользователя
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Связь с пользователем
+  revoked     Boolean  @default(false)                  // Признак отзыва токена
+  createdAt   DateTime @default(now())                  // Дата создания токена
+  updatedAt   DateTime @updatedAt                       // Дата последнего обновления токена
+  expireAt    DateTime                                 // Дата истечения токена
+
+  @@index([userId])                                    // Индекс для быстрого поиска по userId
+}

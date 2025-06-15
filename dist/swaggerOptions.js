@@ -14,6 +14,19 @@ exports.swaggerOptions = {
                 url: `http://localhost:3001`,
             },
         ],
+        components: {
+            securitySchemes: {
+                jwt: {
+                    type: "http",
+                    scheme: "bearer",
+                    in: "header",
+                    bearerFormat: "JWT"
+                },
+            }
+        },
+        security: [{
+                jwt: []
+            }]
     },
     apis: ['./src/routes/*.ts'],
 };
